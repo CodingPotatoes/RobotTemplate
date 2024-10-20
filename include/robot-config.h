@@ -13,11 +13,12 @@ extern vex::controller con;
 
 // ================ OUTPUTS ================
 // Motors
-
+extern vex::motor_group left_motors;
+extern vex::motor_group right_motors;
 // Pneumatics
 
 // ================ SUBSYSTEMS ================
-
+extern TankDrive driveSus;
 // ================ UTILS ================
 
 void robot_init();

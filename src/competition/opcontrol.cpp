@@ -8,6 +8,13 @@
 void opcontrol()
 {
     // ================ INIT ================
+while(true){
+    double straight = (double)con.Axis3.position() / 100;
+    double turn = (double)con.Axis1.position() / 100;
+
+    driveSus.drive_arcade(straight, turn * 0.75, 1);
+}
+
 
     // ================ PERIODIC ================
 }
