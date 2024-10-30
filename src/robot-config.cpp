@@ -19,7 +19,11 @@ vex::motor right_front(vex::PORT18, vex::gearSetting::ratio36_1, false);
 vex::motor right_middle(vex::PORT19, vex::gearSetting::ratio36_1, false);
 vex::motor right_rear(vex::PORT20, vex::gearSetting::ratio36_1, false);
 vex::motor_group right_motors = {right_front, right_middle, right_rear};
+
 // ================ SUBSYSTEMS ================
+
+
+
 
 
 // ======== SUBSYSTEMS ========
@@ -39,14 +43,29 @@ robot_specs_t robot_cfg = {
     .turn_feedback = &turn_pid,
 };
 
-TankDrive driveSus(left_motors, right_motors, robot_cfg);
+TankDrive driveSus(left_motors, right_motors, robot_cfg, &odom);
+
+
+// Odometry
+CustomEncoder left_enc(Brain.ThreeWirePort.B, 2048);
+CustomEncoder right_enc(Brain.ThreeWirePort.C, 2048);
+
+vex::inertial imu(vex::PORT14, vex::turnType::right);
+
+OdometryTank odom(left_enc, right_enc, robot_cfg, &imu);
+
+vex::controller::button setPosition = con.ButtonX;
 
 // ================ UTILS ================
+
+
+
 
 /**
  * Main robot initialization on startup. Runs before opcontrol and autonomous are started.
  */
 void robot_init()
 {
-
+    imu.startCalibration();
+    vexDelay(1);
 }

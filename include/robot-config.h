@@ -7,9 +7,9 @@ extern vex::controller con;
 
 // ================ INPUTS ================
 // Digital sensors
-
+extern vex::inertial imu;
 // Analog sensors
-
+extern OdometryTank odom;
 
 // ================ OUTPUTS ================
 // Motors
