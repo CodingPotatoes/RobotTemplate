@@ -10,13 +10,16 @@ extern vex::controller con;
 extern vex::inertial imu;
 // Analog sensors
 extern OdometryTank odom;
-
 // ================ OUTPUTS ================
 // Motors
 extern vex::motor_group left_motors;
 extern vex::motor_group right_motors;
-// Pneumatics
 
+// Pneumatics
+extern PID turn_pid;
+extern PID drive_pid;
+extern PID::pid_config_t drive_pid_cfg;
+extern PID::pid_config_t turn_pid_cfg;
 // ================ SUBSYSTEMS ================
 extern TankDrive driveSus;
 // ================ UTILS ================
