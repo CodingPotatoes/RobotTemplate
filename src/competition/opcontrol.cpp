@@ -11,6 +11,40 @@ vex::timer stopWatch;
 double finalP;
 double period;
 
+void findPID(string method){
+    if(method == "P"){
+        drive_pid_cfg.p *= 0.5;
+    }
+    else if(method == "PI"){
+        drive_pid_cfg.p *= 0.45;
+        drive_pid_cfg.i *= 0.83 * period;
+    }
+    else if(method == "PD"){
+        drive_pid_cfg.p *= 0.8;
+        drive_pid_cfg.d = 0.125 * period;
+    }
+    else if(method == "Classic PID"){
+        drive_pid_cfg.p *= 0.6;
+        drive_pid_cfg.i = 0.5 * period;
+        drive_pid_cfg.d = 0.125 * period;
+    }
+    else if(method == "Pessen Integral"){
+        drive_pid_cfg.p *= 0.7;
+        drive_pid_cfg.i = 0.4 * period;
+        drive_pid_cfg.d = 0.15 * period;
+    }
+    else if(method == "Some Overshoot"){
+        drive_pid_cfg.p *= (1/3);
+        drive_pid_cfg.i = 0.5 * period;
+        drive_pid_cfg.d = (1/3) * period;
+    }
+    else if(method == "No Overshoot"){
+        drive_pid_cfg.p *= 0.2;
+        drive_pid_cfg.i = 0.5 * period;
+        drive_pid_cfg.d = (1/3) * period;
+    }
+}
+
 class setPIDDrive : public AutoCommand{
     public:
     bool run() override{
@@ -101,39 +135,7 @@ class checkErrorTurn: public AutoCommand{
 
 };
 
-void findPID(string method){
-    if(method == "P"){
-        drive_pid_cfg.p *= 0.5;
-    }
-    else if(method == "PI"){
-        drive_pid_cfg.p *= 0.45;
-        drive_pid_cfg.i *= 0.83 * period;
-    }
-    else if(method == "PD"){
-        drive_pid_cfg.p *= 0.8;
-        drive_pid_cfg.d = 0.125 * period;
-    }
-    else if(method == "Classic PID"){
-        drive_pid_cfg.p *= 0.6;
-        drive_pid_cfg.i = 0.5 * period;
-        drive_pid_cfg.d = 0.125 * period;
-    }
-    else if(method == "Pessen Integral"){
-        drive_pid_cfg.p *= 0.7;
-        drive_pid_cfg.i = 0.4 * period;
-        drive_pid_cfg.d = 0.15 * period;
-    }
-    else if(method == "Some Overshoot"){
-        drive_pid_cfg.p *= (1/3);
-        drive_pid_cfg.i = 0.5 * period;
-        drive_pid_cfg.d = (1/3) * period;
-    }
-    else if(method == "No Overshoot"){
-        drive_pid_cfg.p *= 0.2;
-        drive_pid_cfg.i = 0.5 * period;
-        drive_pid_cfg.d = (1/3) * period;
-    }
-}
+
 
 
 class SetPIDTurnFindP : public AutoCommand{
