@@ -31,10 +31,10 @@ vex::motor_group right_motors = {right_front, right_middle, right_rear};
 
 // ======== SUBSYSTEMS ========
 PID::pid_config_t drive_pid_cfg{
-    .p = 0.296555//2871
-    ,.i = 0.12700//099
-    ,.d = 0.03175//02475
-    ,.deadband = 0.7
+    .p = 0.40362
+    ,.i = 0.09500
+    ,.d = 0.02375
+    ,.deadband = 0.5
     ,.on_target_time = 0.06
 };
 

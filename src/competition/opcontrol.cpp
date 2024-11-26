@@ -152,7 +152,7 @@ class setPIDDrive : public AutoCommand{
         vexDelay(1);
         //if the change in Y >=0 then it either hasnt reached the end point, or hasnt started oscillating, increases P until it starts oscillating
         if((initVelocityPos == isVelocityPos) && !isOscillating && foundInitVelocity){
-            drive_pid_cfg.p += 0.002;
+            drive_pid_cfg.p += 0.003;
             printf("P: %f ", drive_pid_cfg.p);
             vexDelay(1);
             // printf(" P: %f yInit: %f, yEnd: %f, deltaY: %f\n", drive_pid_cfg.p, initPose.y, endPose.y, deltaPose.y);
@@ -167,7 +167,7 @@ class setPIDDrive : public AutoCommand{
             initPose = odom.get_position();
             foundInitPose = true;
             isOscillating = true;
-            drive_pid_cfg.p *= 1.5;
+            drive_pid_cfg.p *= 1.4;
             initTime = stopWatch.time();
             printf("Pfinal: %f", finalP);
             vexDelay(1);
