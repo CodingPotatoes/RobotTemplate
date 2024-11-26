@@ -1,4 +1,5 @@
 #include "robot-config.h"
+#include "../core/include/subsystems/odometry/odometry_nwheel.h"
 
 vex::brain Brain;
 vex::controller con;
@@ -7,6 +8,9 @@ vex::controller con;
 // Digital sensors
 
 // Analog sensors
+CustomEncoder left_encoder{Brain.ThreeWirePort.A, 2048};
+CustomEncoder right_encoder{Brain.ThreeWirePort.C, 2048};
+CustomEncoder rear_encoder{Brain.ThreeWirePort.E, 2048};
 
 // ================ OUTPUTS ================
 // Motors
@@ -27,10 +31,10 @@ vex::motor_group right_motors = {right_front, right_middle, right_rear};
 
 // ======== SUBSYSTEMS ========
 PID::pid_config_t drive_pid_cfg{
-    .p = 0.2805//0.2871
-    ,.i = 0.134//0.099
-    ,.d = 0.0335//0.02475
-    ,.deadband = 0.5
+    .p = 0.296555//2871
+    ,.i = 0.12700//099
+    ,.d = 0.03175//02475
+    ,.deadband = 0.7
     ,.on_target_time = 0.06
 };
 
@@ -52,7 +56,7 @@ robot_specs_t robot_cfg = {
     .robot_radius  = 10,
     .odom_wheel_diam = 3.0,
     .odom_gear_ratio = (4.0 / 3.0),
-    .dist_between_wheels = 5.5,
+    .dist_between_wheels = 9.875,
 
     .drive_feedback = &drive_pid,
     .turn_feedback = &turn_pid,
@@ -66,13 +70,19 @@ CustomEncoder right_enc(Brain.ThreeWirePort.C, 2048);
 
 vex::inertial imu(vex::PORT14, vex::turnType::right);
 
+tracking_wheel_cfg_t left_config{-1.75, 2.25, 0, 1.0625};
+tracking_wheel_cfg_t right_config{1.75, -2.25, M_PI, 1.0625};
+tracking_wheel_cfg_t rear_config{-8.5, -0.5, ((3 * M_PI) / 2), 1.0625};
+
+// OdometryNWheel<3> odom({left_encoder, right_encoder, rear_encoder}, {left_config, right_config, rear_config}, &imu, true);
+
 OdometryTank odom(left_motors, right_motors,robot_cfg, &imu);
 
 vex::controller::button setPosition = con.ButtonX;
 
 // ================ UTILS ================
 
-OdometryTank& realOdom = odom;
+// OdometryTank& realOdom = odom;
 
 
 /**

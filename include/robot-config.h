@@ -1,6 +1,7 @@
 #pragma once
 #include "vex.h"
 #include "core.h"
+#include "../core/include/subsystems/odometry/odometry_nwheel.h"
 
 extern vex::brain brain;
 extern vex::controller con;
@@ -9,6 +10,7 @@ extern vex::controller con;
 // Digital sensors
 extern vex::inertial imu;
 // Analog sensors
+// extern OdometryNWheel<3> odom;
 extern OdometryTank odom;
 // ================ OUTPUTS ================
 // Motors

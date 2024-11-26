@@ -10,149 +10,237 @@
 vex::timer stopWatch;
 double finalP;
 double period;
+bool finished = false;
 
-void findPID(string method){
+void findPID(string method, PID::pid_config_t thePID, bool driveTurn){
+    printf("BadP: %f BadI: %f BadD: %f\n", thePID.p, thePID.i, thePID.d);
+    vexDelay(5);
     if(method == "P"){
-        drive_pid_cfg.p *= 0.5;
+        printf("Using P: ");
+        vexDelay(5);
+        thePID.p *= 0.5;
+        vexDelay(5);
     }
     else if(method == "PI"){
-        drive_pid_cfg.p *= 0.45;
-        drive_pid_cfg.i *= 0.83 * period;
+        printf("Using PI: ");
+        vexDelay(5);
+        thePID.p *= 0.45;
+        vexDelay(5);
+        thePID.i = 0.83 * period;
+        vexDelay(5);
     }
     else if(method == "PD"){
-        drive_pid_cfg.p *= 0.8;
-        drive_pid_cfg.d = 0.125 * period;
+        printf("Using PD: ");
+        vexDelay(5);
+        thePID.p *= 0.8;
+        vexDelay(5);
+        thePID.d = 0.125 * period;
+        vexDelay(5);
     }
     else if(method == "Classic PID"){
-        drive_pid_cfg.p *= 0.6;
-        drive_pid_cfg.i = 0.5 * period;
-        drive_pid_cfg.d = 0.125 * period;
+        printf("Using Classic PID: ");
+        vexDelay(5);
+        thePID.p *= 0.6;
+        vexDelay(5);
+        thePID.i = 0.5 * period;
+        vexDelay(5);
+        thePID.d = 0.125 * period;
+        vexDelay(5);
     }
     else if(method == "Pessen Integral"){
-        drive_pid_cfg.p *= 0.7;
-        drive_pid_cfg.i = 0.4 * period;
-        drive_pid_cfg.d = 0.15 * period;
+        printf("Using Pessen Integral: ");
+        vexDelay(5);
+        thePID.p *= 0.7;
+        vexDelay(5);
+        thePID.i = 0.4 * period;
+        vexDelay(5);
+        thePID.d = 0.15 * period;
+        vexDelay(5);
     }
     else if(method == "Some Overshoot"){
-        drive_pid_cfg.p *= (1/3);
-        drive_pid_cfg.i = 0.5 * period;
-        drive_pid_cfg.d = (1/3) * period;
+        printf("Using Some Overshoot: ");
+        vexDelay(5);
+        thePID.p *= (1.0 / 3.0);
+        vexDelay(5);
+        thePID.i = 0.5 * period;
+        vexDelay(5);
+        thePID.d = (1.0 / 3.0) * period;
+        vexDelay(5);
     }
     else if(method == "No Overshoot"){
-        drive_pid_cfg.p *= 0.2;
-        drive_pid_cfg.i = 0.5 * period;
-        drive_pid_cfg.d = (1/3) * period;
+        printf("Using No Overshoot: ");
+        thePID.p *= 0.2;
+        thePID.i = 0.5 * period;
+        thePID.d = (1.0 / 3.0) * period;
     }
-}
+    vexDelay(5);
+    printf("GoodP: %f GoodI: %f GoodD: %f\n", thePID.p, thePID.i, thePID.d);
+    vexDelay(5);
+    if(driveTurn){
+        drive_pid_cfg.p = thePID.p;
+        vexDelay(5);
+        drive_pid_cfg.i = thePID.i;
+        vexDelay(5);
+        drive_pid_cfg.d = thePID.d;
+        vexDelay(5);
+    }
+    else{
+        turn_pid_cfg.p = thePID.p;
+        vexDelay(5);
+        turn_pid_cfg.i = thePID.i;
+        vexDelay(5);
+        turn_pid_cfg.d = thePID.d;
+        vexDelay(5);
+    }
+};
 
 class setPIDDrive : public AutoCommand{
     public:
-    bool run() override{
-    drive_pid_cfg.p =0;
-    drive_pid_cfg.i =0;
-    drive_pid_cfg.d =0;
-    bool startedOscillation = false;
+    bool isOscillating = false;
     pose_t initPose;
-    bool finished = false;
     bool foundInitPose = false;
     double finalP;
     int initTime;
+    double foundInitVelocity = false;
+    bool initVelocityPos = true;
+    bool isVelocityPos = true;
+    bool run() override{
+    drive_pid_cfg.p = 0;
+    drive_pid_cfg.i = 0;
+    drive_pid_cfg.d = 0;
+    
     stopWatch.clear();
     printf("Original Time: %d\n", stopWatch.time());
+
+    while(!foundInitVelocity){
+        vexDelay(1);
+        printf("Velocity: %f, P: %f \n", right_motors.velocity(percent), drive_pid_cfg.p);
+        if((right_motors.velocity(percent) > 0.01 || right_motors.velocity(percent) < -0.01)){
+            printf("found init velocity\n");
+            initVelocityPos = (right_motors.velocity(percent) > 0);
+            foundInitVelocity = true;
+            vexDelay(1);
+        }
+        else if((right_motors.velocity(percent) < 0.01 && right_motors.velocity(percent) > -0.01)){
+            drive_pid_cfg.p += 0.0005;
+            vexDelay(1);
+        }
+    }
     //Whether or not final values for Max P, Oscillation Period, and Amplitude have been achieved
     while(!finished){
-        vexDelay(5);
+        vexDelay(1);
         // endPose = odom.get_position();
-        printf("Time: %d ", stopWatch.time());
+        printf("Time: %d, Position: %f, ", stopWatch.time(), odom.get_position().x);
 
         if(con.ButtonY.pressing()){
             break;
+            return false;
         }
-        printf("Velocity: %f \n", right_motors.velocity(percent));
 
+        if((-0.01 >= right_motors.velocity(percent) || right_motors.velocity(percent) >= 0.01)){
+        isVelocityPos = (right_motors.velocity(percent) > 0);
+        vexDelay(1);
+        }
+
+        printf("Init Vel Pos?: %d, Current Vel Pos?: %d \n", initVelocityPos, isVelocityPos);
+
+        if(isOscillating){
+            printf("Oscillating...");
+        }
+
+        printf("Velocity: %f \n", right_motors.velocity(percent));
+        vexDelay(1);
         //if the change in Y >=0 then it either hasnt reached the end point, or hasnt started oscillating, increases P until it starts oscillating
-        if((right_motors.velocity(percent) >= 0 ) && startedOscillation == false){
-            drive_pid_cfg.p += 0.005;
-            printf("P: %f", drive_pid_cfg.p);
+        if((initVelocityPos == isVelocityPos) && !isOscillating && foundInitVelocity){
+            drive_pid_cfg.p += 0.002;
+            printf("P: %f ", drive_pid_cfg.p);
+            vexDelay(1);
             // printf(" P: %f yInit: %f, yEnd: %f, deltaY: %f\n", drive_pid_cfg.p, initPose.y, endPose.y, deltaPose.y);
         }
         //once the change in Y < 0, then it is going backwards and is oscillating, begin finding Period and Amplitude of Oscillation
-        else{
-            startedOscillation = true;
-            drive_pid_cfg.p *= 1.1;
+        else if((initVelocityPos != isVelocityPos) && !isOscillating){
+            vexDelay(1);
+            isOscillating = true;
             printf(" Oscillation Started\n");
-            if(foundInitPose == false){
-                finalP = drive_pid_cfg.p;
-                initPose = odom.get_position();
-                foundInitPose = true;
-                startedOscillation = true;
+            vexDelay(1);
+            finalP = drive_pid_cfg.p;
+            initPose = odom.get_position();
+            foundInitPose = true;
+            isOscillating = true;
+            drive_pid_cfg.p *= 1.5;
             initTime = stopWatch.time();
             printf("Pfinal: %f", finalP);
-            }
-            
-            
+            vexDelay(1);
+        }
+        else if((initVelocityPos == isVelocityPos) && isOscillating){
             //get the inital position which should be the amplitude of oscillation since it just started oscillating
             //oand the time when the robot is at that position
             //use a vex timer to find the the time when the robot reaches the initial Y value again, the initial time - the final time if your period
             printf("Unchanged P: %f", drive_pid_cfg.p);
-            if(left_motors.velocity(percent) > 0){
-                printf("InitTime: %d\n", initTime);
-                printf("Final Time: %d ", stopWatch.time());
-                period = (((double)stopWatch.time() - (double)initTime)*2) / 1000;
-                printf("Ymax: %f , Period: %f\n", initPose.y, period);
+            printf("InitTime: %d\n", initTime);
+            printf("Final Time: %d ", stopWatch.time());
+            period = (((double)stopWatch.time() - (double)initTime)*2) / 1000;
+            printf("Ymax: %f , Period: %f\n", initPose.x, period);
+            vexDelay(1);
+            findPID("Classic PID", drive_pid_cfg, true);
+            finished = true;
+            vexDelay(1);
+            }
+        vexDelay(1);
+    }
+return true;
+}
+};
 
-                findPID("PID");
-                printf("GoodP: %f GoodI: %f GoodD: %f", drive_pid_cfg.p, drive_pid_cfg.i, drive_pid_cfg.d);
-                vexDelay(5);
-                finished = true;
-                return true;
+class checkError: public AutoCommand{
+    public:
+    double target;
+    bool driveTurn;
+    checkError(double target, bool driveTurn) : target(target), driveTurn(driveTurn){
+
+    }
+    bool run() override{
+        while(true){
+            vexDelay(5);
+            if(driveTurn){
+            printf("Error: %f\n", target - odom.get_position().x);
+            }
+            else{
+                printf("Error: %f\n", target - odom.get_position().rot);
             }
         }
-    }
-    return false;
-    }
-};
-
-class checkErrorDrive: public AutoCommand{
-    public:
-    bool run() override{
-        while(true){
-            printf("Error: %f\n", 24 - odom.get_position().x);
-        }
         return true;
     }
 
 };
 
-class checkErrorTurn: public AutoCommand{
-    public:
-    bool run() override{
-        while(true){
-            printf("Error: %f\n", 200 - odom.get_position().rot);
-        }
-        return true;
+class finishedCond : public Condition {
+    bool test() override {
+        return finished;
     }
-
 };
 
-
-
-
-class SetPIDTurnFindP : public AutoCommand{
+class setPIDTurn : public AutoCommand{
     public:
-    bool run() override{
-    //initiates values for turning PID
-    bool finished = false;
-    bool foundInitVelocity = false;
+    bool isOscillating = false;
+    pose_t initPose;
+    bool foundInitPose = false;
+    double finalP;
+    int initTime;
+    double foundInitVelocity = false;
     bool initVelocityPos = true;
     bool isVelocityPos = true;
-    for(int i = 3; i > 0;  i--){
-            printf("\n");
-        }
-    printf("Find P Started, Original Time: %d\n", stopWatch.time());
-    //Whether or not final values for Max P, Oscillation Period, and Amplitude have been achieved
+    bool run() override{
+    turn_pid_cfg.p = 0;
+    turn_pid_cfg.i = 0;
+    turn_pid_cfg.d = 0;
+    
+    stopWatch.clear();
+    printf("Original Time: %d\n", stopWatch.time());
+
     while(!foundInitVelocity){
-        printf("GyroRate: %f, P: %f \n", imu.gyroRate(zaxis, rpm), turn_pid_cfg.p);
+        vexDelay(1);
+        printf("Velocity: %f, P: %f \n", imu.gyroRate(zaxis, rpm), turn_pid_cfg.p);
         if((imu.gyroRate(zaxis, rpm) > 0.01 || imu.gyroRate(zaxis, rpm) < -0.01)){
             printf("found init velocity\n");
             initVelocityPos = (imu.gyroRate(zaxis, rpm) > 0);
@@ -164,127 +252,71 @@ class SetPIDTurnFindP : public AutoCommand{
             vexDelay(1);
         }
     }
-
-    while(!finished){
-        if(con.ButtonY.pressing()){
-            break;
-        }
-
-        printf("Velocity: %f, IMU Rotation: %f, odometry position: %f \n", imu.gyroRate(zaxis, rpm), imu.heading(degrees), odom.get_position().rot);
-        vexDelay(1);
-        printf("Time: %d ", stopWatch.time());
-
-        if((-0.01 >= imu.gyroRate(zaxis, rpm) >= 0.01)){
-        isVelocityPos = (imu.gyroRate(zaxis, rpm) > 0);
-        }
-        printf("Init Vel Pos?: %d, Current Vel Pos?: %d \n", initVelocityPos, isVelocityPos);
-        // vexDelay(2);
-
-        if((initVelocityPos == isVelocityPos)){
-            turn_pid_cfg.p += 0.0005;
-            printf("P: %f ", turn_pid_cfg.p);
-        }
-        else{
-            
-            printf(" Oscillation Started\n");
-            printf("Velocity: %f, IMU Rotation: %f, odometry position: %f \n", imu.gyroRate(zaxis, rpm), imu.heading(degrees), odom.get_position().rot);
-            // turn_pid_cfg.p *= 1.4;
-            finalP = turn_pid_cfg.p;
-            printf("Pfinal: %f\n", finalP);
-            return true;
-        }
-    }
-    return false;
-    }
-};
-
-class setPIDTurnOscillating : public AutoCommand{
-    public:
-    bool run() override{
-    //initiates values for turning PID
-    pose_t initPose;
-    bool finished = false;
-    bool foundInitPose = false;
-    bool isOscillating = false;
-    int initTime;
-    stopWatch.clear();
-    bool foundInitVelocity = false;
-    bool initVelocityPos;
-    bool isVelocityPos;
-    for(int i = 3; i > 0;  i--){
-            printf("\n");
-        }
-        // vexDelay(3000);
-    printf("Find Period Started, Original Time: %d\n", stopWatch.time());
     //Whether or not final values for Max P, Oscillation Period, and Amplitude have been achieved
-    while(!foundInitVelocity){
-        if((imu.gyroRate(zaxis, rpm) > 0.01 || imu.gyroRate(zaxis, rpm) < -0.01)){
-            vexDelay(1);
-            printf("found init velocity\n");
-            initVelocityPos = (imu.gyroRate(zaxis, rpm) > 0);
-            foundInitVelocity = true;
-        }
-    vexDelay(1);
-    }
-    vexDelay(1);
-    
     while(!finished){
+        vexDelay(1);
+        // endPose = odom.get_position();
+        printf("Time: %d ", stopWatch.time());
+
         if(con.ButtonY.pressing()){
             break;
+            return false;
         }
-        vexDelay(1);
-        printf("Velocity: %f, IMU Rotation: %f, odometry position: %f, ", imu.gyroRate(zaxis, rpm), imu.heading(degrees), odom.get_position().rot);
-        printf("Time: %d ", stopWatch.time());
-        vexDelay(1);
-        
-        if((imu.gyroRate(zaxis, rpm) > 0.01 || imu.gyroRate(zaxis, rpm) < -0.01)){
-        isVelocityPos = imu.gyroRate(zaxis, rpm) >= 0;
+
+        if((-0.01 >= imu.gyroRate(zaxis, rpm) || imu.gyroRate(zaxis, rpm) >= 0.01)){
+        isVelocityPos = (imu.gyroRate(zaxis, rpm) > 0);
         vexDelay(1);
         }
-        if(isOscillating){
-            printf("Currently Oscillating... ");
-            vexDelay(1);
-        }
-        vexDelay(1);
 
         printf("Init Vel Pos?: %d, Current Vel Pos?: %d \n", initVelocityPos, isVelocityPos);
-        vexDelay(1);
 
+        if(isOscillating){
+            printf("Oscillating...");
+        }
+
+        printf("Velocity: %f \n", imu.gyroRate(zaxis, rpm));
+        vexDelay(1);
         //if the change in Y >=0 then it either hasnt reached the end point, or hasnt started oscillating, increases P until it starts oscillating
-        if((isVelocityPos != initVelocityPos) && !isOscillating && foundInitVelocity){
-            printf("Velocity: %f, IMU Rotation: %f, odometry position: %f \n", imu.gyroRate(zaxis, rpm), imu.heading(degrees), odom.get_position().rot);
-            printf("Begun Oscillating\n");
+        if((initVelocityPos == isVelocityPos) && !isOscillating && foundInitVelocity){
+            turn_pid_cfg.p += 0.002;
+            printf("P: %f", turn_pid_cfg.p);
+            vexDelay(1);
+            // printf(" P: %f yInit: %f, yEnd: %f, deltaY: %f\n", drive_pid_cfg.p, initPose.y, endPose.y, deltaPose.y);
+        }
+        //once the change in Y < 0, then it is going backwards and is oscillating, begin finding Period and Amplitude of Oscillation
+        else if((initVelocityPos != isVelocityPos) && !isOscillating){
             vexDelay(1);
             isOscillating = true;
-            if(foundInitPose == false){
-                initPose = odom.get_position();
-                foundInitPose = true;
-                initTime = stopWatch.time();
-                vexDelay(1);
-            }
+            printf(" Oscillation Started\n");
+            vexDelay(1);
+            finalP = turn_pid_cfg.p;
+            initPose = odom.get_position();
+            foundInitPose = true;
+            isOscillating = true;
+            turn_pid_cfg.p *= 1.5;
+            initTime = stopWatch.time();
+            printf("Pfinal: %f", finalP);
             vexDelay(1);
         }
-        else if((isVelocityPos == initVelocityPos) && isOscillating){
-            vexDelay(1);
-            printf("Oscillation Completed\n");
+        else if((initVelocityPos == isVelocityPos) && isOscillating){
+            //get the inital position which should be the amplitude of oscillation since it just started oscillating
+            //oand the time when the robot is at that position
+            //use a vex timer to find the the time when the robot reaches the initial Y value again, the initial time - the final time if your period
+            printf("Unchanged P: %f", turn_pid_cfg.p);
             printf("InitTime: %d\n", initTime);
             printf("Final Time: %d ", stopWatch.time());
-
             period = (((double)stopWatch.time() - (double)initTime)*2) / 1000;
-            printf("RotMax: %f , Period: %f\n", initPose.rot, period);
-            vexDelay(1);
-
-            findPID("P");
-            printf("GoodP: %f GoodI: %f GoodD: %f\n", drive_pid_cfg.p, drive_pid_cfg.i, drive_pid_cfg.p);
+            printf("Ymax: %f , Period: %f\n", initPose.rot, period);
             vexDelay(1);
             finished = true;
-        }
-        vexDelay(1);
+            vexDelay(1);
+            }
+        vexDelay(5);
     }
-    return false;
+    printf("setPID Done");
+    return true;
     }
 };
-
 
 void opcontrol()
 {
@@ -300,39 +332,47 @@ void opcontrol()
             printf("\n");
         }
         printf("Beginning Loop, X: %.2f, Y: %.2f, driveP: %.2f, turnP %.2f ", odom.get_position().x, odom.get_position().y, drive_pid_cfg.p, turn_pid_cfg.p);
+        vexDelay(10);
         //Command Controller Runs the SetPID loop parallel to the DriveForward Command
         CommandController cc{
             odom.SetPositionCmd({.x=0,.y=0,.rot=0}),
             new Parallel{
-                // new setPIDDrive(),
-                new SetPIDTurnFindP(),
-                driveSus.TurnDegreesCmd(200, 0.7, 0),
-                // driveSus.DriveForwardCmd(24, vex::reverse, 0.7, 0),
-            },
-            new DelayCommand(5000),
-            odom.SetPositionCmd({.x=0,.y=0,.rot=0}),
-            new Parallel{
-                // new setPIDDrive(),
-                new setPIDTurnOscillating(),
-                driveSus.TurnDegreesCmd(200, 0.7, 0),
-                // driveSus.DriveForwardCmd(24, vex::reverse, 0.7, 0),
-            },
+                // driveSus.TurnDegreesCmd(200, 0.7, 0),
+                // new setPIDTurn(),
+                driveSus.DriveForwardCmd(24, vex::forward, 0.5, 0)->withCancelCondition(new finishedCond()),
+                new setPIDDrive()
+            }
         };
         
         cc.run();
         
     });
     con.ButtonB.pressed([](){
-        printf("Beginning Loop, X: %.2f, Y: %.2f, driveP: %.2f, turnP %.2f ", odom.get_position().x, odom.get_position().y, drive_pid_cfg.p, turn_pid_cfg.p);
+        printf("Beginning Loop, X: %.2f, Y: %.2f, driveP: %.2f, driveI: %.2f, driveD: %.2f\n turnP: %.2f, turnI: %.2f, turnD: %.2f \n", odom.get_position().x, odom.get_position().y, drive_pid_cfg.p, drive_pid_cfg.i, drive_pid_cfg.d, turn_pid_cfg.p, turn_pid_cfg.i, turn_pid_cfg.d);
         //Command Controller Runs the SetPID loop parallel to the DriveForward Command
         CommandController cc{
             odom.SetPositionCmd({.x=0,.y=0,.rot=0}),
             new Parallel{
-                driveSus.TurnDegreesCmd(200, 0.7, 0),
-                new checkErrorTurn,
-                // driveSus.DriveForwardCmd(24, vex::forward, 0.7, 0),
-                // new checkErrorDrive(),
-            },
+                // driveSus.TurnDegreesCmd(200, 0.7, 0),
+                driveSus.DriveForwardCmd(24, vex::forward, 0.5, 0),
+                new checkError(24, true)
+            }
+        };
+        
+        cc.run();
+        
+    });
+
+    con.ButtonA.pressed([](){
+        printf("Beginning Loop, X: %.2f, Y: %.2f, driveP: %.2f, driveI: %.2f, driveD: %.2f\n turnP: %.2f, turnI: %.2f, turnD: %.2f \n", odom.get_position().x, odom.get_position().y, drive_pid_cfg.p, drive_pid_cfg.i, drive_pid_cfg.d, turn_pid_cfg.p, turn_pid_cfg.i, turn_pid_cfg.d);
+        //Command Controller Runs the SetPID loop parallel to the DriveForward Command
+        CommandController cc{
+            odom.SetPositionCmd({.x=0,.y=0,.rot=0}),
+            new Parallel{
+                // driveSus.TurnDegreesCmd(200, 0.7, 0),
+                driveSus.DriveForwardCmd(12, vex::reverse, 0.5, 0),
+                new checkError(-12, true)
+            }
         };
         
         cc.run();
