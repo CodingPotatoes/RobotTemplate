@@ -40,6 +40,6 @@
 #include "../core/include/utils/serializer.h"
 #include "../core/include/utils/state_machine.h"
 #include "../core/include/utils/vector2d.h"
-
+#include "../core/include/utils/AutoTuningPID.h"
 // Base package
 #include "../core/include/robot_specs.h"

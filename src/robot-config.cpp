@@ -76,7 +76,7 @@ tracking_wheel_cfg_t rear_config{-8.5, -0.5, ((3 * M_PI) / 2), 1.0625};
 
 // OdometryNWheel<3> odom({left_encoder, right_encoder, rear_encoder}, {left_config, right_config, rear_config}, &imu, true);
 
-OdometryTank odom(left_motors, right_motors,robot_cfg, &imu);
+OdometryTank odom(left_encoder, right_encoder, robot_cfg, &imu);
 
 vex::controller::button setPosition = con.ButtonX;
 
