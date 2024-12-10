@@ -13,15 +13,7 @@ void opcontrol()
     while(imu.isCalibrating()){
         vexDelay(1);
     }
-    static DriveTuningConfig tuningConfig{
-        .startspeed = 0.5
-    ,.endspeed = 0
-    ,.dir = vex::forward
-    ,.distance = 24
-    ,.pidConfig = &drive_pid_cfg
-    ,.right_motors = &right_motors
-    ,.odom = odom
-    };
+    DriveTuningConfig tuningConfig(0.7, 0, 24, &drive_pid_cfg, vex::forward, &right_motors, &odom, "Classic PID");
     static AutoTuningTools autoTuner(&driveSus, tuningConfig);
     con.ButtonX.pressed([](){
         autoTuner.TuneDrivePID();

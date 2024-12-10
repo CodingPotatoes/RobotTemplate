@@ -8,6 +8,7 @@
 
 #include "../core/include/subsystems/odometry/odometry_tank.h"
 #include "../core/include/subsystems/tank_drive.h"
+#include "robot-config.h"
 
 vex::timer stopWatch;
 double finalP;
@@ -90,10 +91,11 @@ class setPIDDrive : public AutoCommand{
     double foundInitVelocity = false;
     bool initVelocityPos = true;
     bool isVelocityPos = true;
-    PID::pid_config_t driveConfig;
-    vex::motor_group rightMotors;
+    PID::pid_config_t &driveConfig;
+    vex::motor_group &rightMotors;
+    string tunerMethod;
     //Input the driveConfig and right motors
-    setPIDDrive(PID::pid_config_t *driveConfig, vex::motor_group *rightMotors) : driveConfig(*driveConfig), rightMotors(*rightMotors){
+    setPIDDrive(PID::pid_config_t *driveConfig, vex::motor_group *rightMotors, string tunerMethod) : driveConfig(*driveConfig), rightMotors(*rightMotors), tunerMethod(tunerMethod){
 
     }
     bool run() override{
@@ -108,7 +110,7 @@ class setPIDDrive : public AutoCommand{
     //does this by increasing p until it gets a velocity over or under 0 and sets the initial velocity
     while(!foundInitVelocity){
         vexDelay(1);
-        printf("Velocity: %f, P: %f \n", rightMotors.velocity(percent), driveConfig.p);
+        printf("Velocity: %f, P: %f \n", rightMotors.velocity(percent), drive_pid_cfg.p);
         if((rightMotors.velocity(percent) > 0.01 || rightMotors.velocity(percent) < -0.01)){
             printf("found init velocity\n");
             initVelocityPos = (rightMotors.velocity(percent) > 0);
@@ -116,7 +118,7 @@ class setPIDDrive : public AutoCommand{
             vexDelay(1);
         }
         else if((rightMotors.velocity(percent) < 0.01 && rightMotors.velocity(percent) > -0.01)){
-            driveConfig.p += 0.0005;
+            driveConfig.p += 0.00005;
             vexDelay(1);
         }
     }
@@ -138,12 +140,11 @@ class setPIDDrive : public AutoCommand{
         vexDelay(1);
         //increases the P value until the velocity sign has changed
         if((initVelocityPos == isVelocityPos) && !isOscillating && foundInitVelocity){
-            driveConfig.p += 0.003;
+            driveConfig.p += 0.0001;
             printf("P: %f ", driveConfig.p);
             vexDelay(1);
         }
         //once the sign has changed, get the time for the start of the period of oscillation,
-        //increase p a little to get a stable oscillation, and stop increasing it
         else if((initVelocityPos != isVelocityPos) && !isOscillating){
             vexDelay(1);
             isOscillating = true;
@@ -151,7 +152,6 @@ class setPIDDrive : public AutoCommand{
             vexDelay(1);
             finalP = driveConfig.p;
             isOscillating = true;
-            driveConfig.p *= 1.4;
             initTime = stopWatch.time();
             printf("Pfinal: %f", finalP);
             vexDelay(1);
@@ -166,7 +166,7 @@ class setPIDDrive : public AutoCommand{
             period = (((double)stopWatch.time() - (double)initTime)*2) / 1000;
             printf("Period: %f\n", period);
             vexDelay(1);
-            findPID("Classic PID", driveConfig);
+            findPID(tunerMethod, driveConfig);
             finished = true;
             vexDelay(1);
             }
@@ -180,8 +180,8 @@ class checkError: public AutoCommand{
     public:
     double target;
     bool driveTurn;
-    OdometryTank odom;
-    checkError(double target, bool driveTurn, OdometryTank &odom) : target(target), driveTurn(driveTurn), odom(odom){
+    OdometryTank &odom;
+    checkError(double target, bool driveTurn, OdometryTank *odom) : target(target), driveTurn(driveTurn), odom(*odom){
 
     }
     bool run() override{
@@ -267,7 +267,7 @@ class setPIDTurn : public AutoCommand{
             vexDelay(1);
             finalP = turnConfig.p;
             isOscillating = true;
-            turnConfig.p *= 1.5;
+            // turnConfig.p *= 1.5;
             initTime = stopWatch.time();
             printf("Pfinal: %f", finalP);
             vexDelay(1);
@@ -299,7 +299,7 @@ void AutoTuningTools::TuneDrivePID(){
             cfg.odom.SetPositionCmd({.x=0,.y=0,.rot=0}),
             new Parallel{
                 driveSys.DriveForwardCmd(cfg.distance, cfg.dir, cfg.startspeed, cfg.endspeed)->withCancelCondition(new finishedCond()),
-                new setPIDDrive(cfg.pidConfig, cfg.right_motors)
+                new setPIDDrive(&cfg.pidConfig, &cfg.right_motors, cfg.tunerMethod)
             }
         };
         
@@ -309,8 +309,8 @@ void AutoTuningTools::driveWithError(){
         CommandController cc{
             cfg.odom.SetPositionCmd({.x=0,.y=0,.rot=0}),
             new Parallel{
-                driveSys.DriveForwardCmd(cfg.distance, cfg.dir, cfg.startspeed, cfg.endspeed)->withCancelCondition(new finishedCond()),
-                new checkError(24, true, cfg.odom)
+                driveSys.DriveForwardCmd(cfg.distance, cfg.dir, cfg.startspeed, cfg.endspeed),
+                new checkError(24, true, &cfg.odom)
             }
         };
         
